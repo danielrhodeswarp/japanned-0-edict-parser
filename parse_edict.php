@@ -18,6 +18,10 @@ foreach($lines as $lineNumber => $line)
 //kill previous log file
 unlink('parse_edict.log');
 
+unlink('dictionary_data.js');
+
+log_to_file("var dictionaryData = [", 'dictionary_data.js');
+
 //what to do with "oddball" entries?
 $oddballPolicy = 'include-in-parsing';	//can be 'include-in-parsing' or 'exclude-from-parsing'
 
@@ -58,7 +62,7 @@ foreach($xml->entry as $entry)
 	//VAR_DUMP(implode('X', (array)$entry->sense->gloss));
 	//error_log(implode(' ', (array)$entry->sense->gloss) . PHP_EOL, 3, 'gloss.log');
 	
-	$desc = implode('; ', (array)$entry->sense->gloss);
+	$definition = implode('; ', (array)$entry->sense->gloss);
 	$kana = $entry->r_ele->reb;
 	$kanji = $entry->k_ele->keb;
 	
@@ -74,13 +78,22 @@ foreach($xml->entry as $entry)
 		log_to_file("Multiple <sense> nodes in ent_seq {$entry->ent_seq}");
 	}
 
-	ECHO "[k_eles: {$k_eles}, r_eles: {$r_eles}] kanji: {$kanji}, kana: {$kana}, desc: {$desc}" . PHP_EOL;
+	//ECHO "[k_eles: {$k_eles}, r_eles: {$r_eles}] kanji: {$kanji}, kana: {$kana}, desc: {$desc}" . PHP_EOL;
 	
-	ECHO '--------------------------------------' . PHP_EOL;
+	//ECHO '--------------------------------------' . PHP_EOL;
+
+	$safeDefinition = json_encode($definition);
+	$jsLine = <<<JS
+	{kanji:"{$kanji}", kana:"{$kana}", definition:{$safeDefinition}}, 
+JS;
+
+	log_to_file($jsLine, 'dictionary_data.js');
 
 	$parsed++;
 
 }
+
+log_to_file("];", 'dictionary_data.js');
 
 echo "Oddball policy: {$oddballPolicy}". PHP_EOL;
 echo "Parsed: {$parsed} entries". PHP_EOL;
@@ -137,7 +150,7 @@ function entry_is_oddball(SimpleXMLElement $entry)
 
 
 
-function log_to_file($message)
+function log_to_file($message, $filename = 'parse_edict.log')
 {
-	error_log($message . PHP_EOL, 3, 'parse_edict.log');
+	error_log($message . PHP_EOL, 3, $filename);
 }
